@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, Share2, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Heart, Share2, Clock, CheckCircle, XCircle, Loader2, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +26,17 @@ const PostCard = ({ post, status = 'approved' }) => {
       queryClient.invalidateQueries({ queryKey: ['user-posts'] });
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => client.delete(`/posts/${post._id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['explore'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
+    }
+  });
+
+  const canDelete = user && author && (user._id === author._id || user.role === 'admin');
 
   const statusConfig = {
     pending: { icon: Clock, color: 'text-amber-500', label: 'Under Review', bg: 'bg-amber-50 dark:bg-amber-900/20' },
@@ -72,12 +83,28 @@ const PostCard = ({ post, status = 'approved' }) => {
           </div>
         </div>
 
-        {status !== 'approved' && (
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${currentStatus.bg} ${currentStatus.color}`}>
-            <Icon size={14} />
-            <span>{currentStatus.label}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {status !== 'approved' && (
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${currentStatus.bg} ${currentStatus.color}`}>
+              <Icon size={14} />
+              <span>{currentStatus.label}</span>
+            </div>
+          )}
+          {canDelete && (
+            <button 
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this post?')) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all disabled:opacity-50"
+              title="Delete Post"
+            >
+              {deleteMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-slate-800 dark:text-slate-200 leading-relaxed mb-4 whitespace-pre-wrap">

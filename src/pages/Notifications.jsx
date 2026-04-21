@@ -30,7 +30,6 @@ const Notifications = () => {
 
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-brand" size={40} /></div>;
 
-  // Batched Notifications Logic
   const getBatchedNotifications = (notifications) => {
     const batches = [];
     const processed = new Set();
@@ -38,11 +37,10 @@ const Notifications = () => {
     notifications.forEach((notif, index) => {
       if (processed.has(index)) return;
 
-      // Only batch Likes and Follows for now
       if (notif.type === 'like' && notif.postId) {
-        const similar = notifications.filter((n, i) => 
-          !processed.has(i) && 
-          n.type === 'like' && 
+        const similar = notifications.filter((n, i) =>
+          !processed.has(i) &&
+          n.type === 'like' &&
           n.postId?._id === notif.postId._id
         );
 
@@ -57,7 +55,7 @@ const Notifications = () => {
           return;
         }
       }
-      
+
       batches.push(notif);
       processed.add(index);
     });
@@ -71,7 +69,7 @@ const Notifications = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center px-2">
         <h1 className="text-2xl font-bold">Notifications</h1>
-        <button 
+        <button
           onClick={() => markAllRead.mutate()}
           className="text-sm font-bold text-brand hover:underline"
         >
@@ -89,28 +87,28 @@ const Notifications = () => {
           batches.map((notif) => {
             const config = IconMap[notif.type] || IconMap.post_rejected;
             const Icon = config.icon;
-            
+
             return (
               <div key={notif._id} className={`premium-card p-4 flex items-start gap-4 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 ${!notif.read ? 'border-l-4 border-l-brand' : ''}`}>
                 <div className={`p-2.5 rounded-xl ${config.bg} ${config.color}`}>
                   <Icon size={20} />
                 </div>
-                
+
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     {notif.isBatch ? (
                       <div className="flex -space-x-2">
-                         {notif.actors.slice(0, 3).map((actor, i) => (
-                           <img key={i} src={actor.avatarUrl} className="w-6 h-6 rounded-full border-2 border-white shadow-sm" alt="" />
-                         ))}
+                        {notif.actors.slice(0, 3).map((actor, i) => (
+                          <img key={i} src={actor.avatarUrl} className="w-6 h-6 rounded-full border-2 border-white shadow-sm" alt="" />
+                        ))}
                       </div>
                     ) : (
                       <img src={notif.actorId?.avatarUrl} className="w-6 h-6 rounded-full" alt="" />
                     )}
                     <p className="text-sm">
                       <span className="font-bold">
-                        {notif.isBatch 
-                          ? `${notif.actorId?.displayName} and ${notif.count - 1} others` 
+                        {notif.isBatch
+                          ? `${notif.actorId?.displayName} and ${notif.count - 1} others`
                           : notif.actorId?.displayName || 'System'}
                       </span>
                       {' '}
@@ -121,13 +119,13 @@ const Notifications = () => {
                       {notif.type === 'post_rejected' && 'Your post was rejected.'}
                     </p>
                   </div>
-                  
+
                   {notif.postId?.content && (
                     <p className="text-xs text-slate-500 mt-1 line-clamp-1 italic">
                       "{notif.postId.content}"
                     </p>
                   )}
-                  
+
                   <span className="text-[10px] text-slate-400 mt-2 block uppercase font-bold tracking-tighter">
                     {formatDistanceToNow(new Date(notif.createdAt))} ago
                   </span>

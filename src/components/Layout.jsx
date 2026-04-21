@@ -4,6 +4,7 @@ import { Home, Bell, User, PlusSquare, BarChart3, LogOut, Compass } from 'lucide
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useState, useEffect } from 'react';
+import client from '../api/client';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -24,6 +25,15 @@ const Layout = () => {
       };
     }
   }, [socket]);
+
+  useEffect(() => {
+    if (user && location.pathname !== '/notifications') {
+      client.get('/notifications').then(res => {
+        const unread = res.data.filter(n => !n.read).length;
+        setUnreadCount(unread);
+      }).catch(console.error);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (location.pathname === '/notifications') {
