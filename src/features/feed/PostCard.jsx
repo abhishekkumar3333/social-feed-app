@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Share2, Clock, CheckCircle, XCircle, Send, Loader2 } from 'lucide-react';
+import { Heart, Share2, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 const PostCard = ({ post, status = 'approved' }) => {
   const author = post.author;
   const queryClient = useQueryClient();
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
+  const { user } = useAuth();
 
   const likeMutation = useMutation({
     mutationFn: () => client.post(`/posts/${post._id}/like`),
@@ -18,12 +18,12 @@ const PostCard = ({ post, status = 'approved' }) => {
     }
   });
 
-  const commentMutation = useMutation({
-    mutationFn: (content) => client.post(`/posts/${post._id}/comment`, { content }),
+  const followMutation = useMutation({
+    mutationFn: () => client.post(`/users/${author._id}/follow`),
     onSuccess: () => {
-      setCommentText('');
-      queryClient.invalidateQueries(['feed']);
-      queryClient.invalidateQueries(['user-posts']);
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['explore'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
     }
   });
 
@@ -36,25 +36,36 @@ const PostCard = ({ post, status = 'approved' }) => {
   const currentStatus = statusConfig[status];
   const Icon = currentStatus?.icon;
 
-  const handleComment = (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    commentMutation.mutate(commentText);
-  };
+
 
   return (
     <article className="premium-card p-6 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-start mb-4">
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800">
             <img 
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${author?.name || 'default'}`} 
-              alt={author?.name}
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${author?.username || author?.name || 'default'}`} 
+              alt={author?.username || author?.name}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-50">{author?.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 dark:text-slate-50">{author?.displayName || author?.username || author?.name}</h3>
+              {user && author && user._id !== author._id && (
+                <button
+                  onClick={() => followMutation.mutate()}
+                  disabled={followMutation.isPending}
+                  className={`text-xs font-bold px-3 py-1 rounded-full transition-all border ${
+                    author.isFollowing 
+                      ? 'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'border-brand text-brand hover:bg-brand/10'
+                  } ${followMutation.isPending ? 'opacity-50' : ''}`}
+                >
+                  {followMutation.isPending ? '...' : (author.isFollowing ? 'Following' : 'Follow')}
+                </button>
+              )}
+            </div>
             <span className="text-sm text-slate-500">
               {formatDistanceToNow(new Date(post.createdAt))} ago
             </span>
@@ -99,70 +110,12 @@ const PostCard = ({ post, status = 'approved' }) => {
           <span className="text-sm font-medium">{post.likesCount || 0}</span>
         </button>
 
-        <button 
-          onClick={() => setShowComments(!showComments)}
-          className={`flex items-center gap-2 transition-colors group ${showComments ? 'text-brand' : 'text-slate-500'}`}
-        >
-          <div className={`p-2 rounded-full transition-all ${showComments ? 'bg-brand/10' : 'group-hover:bg-brand/10'}`}>
-            <MessageCircle size={18} />
-          </div>
-          <span className="text-sm font-medium">{post.commentsCount || 0}</span>
-        </button>
-
-        <button className="flex items-center gap-2 text-slate-500 hover:text-purple-500 transition-colors group ml-auto">
-          <div className="p-2 rounded-full group-hover:bg-purple-50 dark:group-hover:bg-purple-900/20 transition-all">
+        <button className="flex items-center gap-2 text-slate-500 hover:text-brand transition-colors group ml-auto">
+          <div className="p-2 rounded-full group-hover:bg-brand/10 dark:group-hover:bg-brand/20 transition-all">
             <Share2 size={18} />
           </div>
         </button>
       </div>
-
-      {showComments && (
-        <div className="mt-4 pt-4 border-t dark:border-slate-800 animate-in slide-in-from-top-2">
-          {/* Recent Comments List */}
-          <div className="space-y-3 mb-4 max-h-48 overflow-y-auto pr-2 scrollbar-hide">
-            {post.recentComments?.length > 0 ? (
-              post.recentComments.map((comment) => (
-                <div key={comment._id} className="flex gap-3 items-start animate-in fade-in slide-in-from-left-2 transition-all">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0">
-                    <img 
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?.name}`} 
-                      alt="avatar" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl">
-                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{comment.user?.name}</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{comment.content}</p>
-                    <span className="text-[10px] text-slate-500 mt-1 block">
-                      {formatDistanceToNow(new Date(comment.createdAt))} ago
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-xs text-slate-500 py-2">No comments yet. Be the first!</p>
-            )}
-          </div>
-
-          {/* Comment Form */}
-          <form onSubmit={handleComment} className="flex gap-2">
-            <input 
-              type="text" 
-              placeholder="Write a comment..." 
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-            <button 
-              type="submit" 
-              disabled={commentMutation.isPending || !commentText.trim()}
-              className="p-2 bg-brand text-white rounded-xl disabled:opacity-50 hover:opacity-90 transition-all font-bold flex items-center justify-center shrink-0"
-            >
-              {commentMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
-          </form>
-        </div>
-      )}
     </article>
   );
 };

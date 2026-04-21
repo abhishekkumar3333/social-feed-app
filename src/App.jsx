@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Feed from './pages/Feed';
+import Explore from './pages/Explore';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
@@ -33,6 +34,7 @@ function App() {
         </ProtectedRoute>
       }>
         <Route index element={<Feed />} />
+        <Route path="explore" element={<Explore />} />
         <Route path="profile/:id" element={<Profile />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="admin" element={

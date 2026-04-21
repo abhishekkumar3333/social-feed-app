@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Bell, User, PlusSquare, BarChart3, LogOut } from 'lucide-react';
+import { Home, Bell, User, PlusSquare, BarChart3, LogOut, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useState, useEffect } from 'react';
@@ -33,6 +33,7 @@ const Layout = () => {
 
   const navItems = [
     { icon: Home, label: 'Feed', path: '/' },
+    { icon: Compass, label: 'Explore', path: '/explore' },
     { icon: Bell, label: 'Notifications', path: '/notifications', badge: unreadCount },
     { icon: User, label: 'Profile', path: `/profile/${user?._id}` },
     ...(user?.role === 'admin' ? [{ icon: BarChart3, label: 'Admin', path: '/admin' }] : []),
