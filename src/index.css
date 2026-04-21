@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #6366f1;
+  --color-brand-hover: #4f46e5;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@utility glass-effect {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200 dark:border-slate-800;
+}
+
+@utility premium-card {
+  @apply glass-effect rounded-2xl shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+@utility btn-primary {
+  @apply bg-brand hover:bg-brand-hover text-white px-6 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50;
+}
+
+@utility input-field {
+  @apply w-full bg-slate-100 dark:bg-slate-800 border-transparent focus:border-brand focus:ring-0 rounded-xl px-4 py-3 transition-all outline-none;
+}
+
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: #1a1a1a;
+  background-color: #f8fafc;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f8fafc;
+    background-color: #0f172a;
+  }
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
