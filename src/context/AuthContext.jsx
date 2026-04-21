@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
+      if (token && token !== 'undefined') {
         try {
           const { data } = await client.get('/auth/me');
           setUser(data);
@@ -18,6 +18,8 @@ export const AuthProvider = ({ children }) => {
           console.error('Auth verification failed:', error);
           localStorage.removeItem('token');
         }
+      } else if (token === 'undefined') {
+        localStorage.removeItem('token');
       }
       setLoading(false);
     };
@@ -26,18 +28,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    // Supports both {email, password} and separate arguments for legacy
     const payload = typeof credentials === 'object' ? credentials : { email: arguments[0], password: arguments[1] };
     const { data } = await client.post('/auth/login', payload);
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('token', data.accessToken);
     setUser(data);
     return data;
   };
 
   const register = async (userData) => {
-    // Supports full userData object (username, displayName, email, password)
     const { data } = await client.post('/auth/register', userData);
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('token', data.accessToken);
     setUser(data);
     return data;
   };
