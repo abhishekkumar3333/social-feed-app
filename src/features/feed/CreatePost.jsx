@@ -34,6 +34,7 @@ const CreatePost = () => {
       setContent('');
       removeImage();
       queryClient.invalidateQueries(['feed']);
+      window.alert('Post submitted successfully!');
     }
   });
 

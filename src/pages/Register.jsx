@@ -12,7 +12,7 @@ const Register = () => {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
-  const { register, loading } = useAuth();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -22,16 +22,22 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
+      setLoading(false);
       return setError('Passwords do not match');
     }
 
     try {
-      await register(formData);
-      navigate('/');
+      // Just call the API. The user will be redirected to Login.
+      const { default: client } = await import('../api/client');
+      await client.post('/auth/register', formData);
+      navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Try a different username/email.');
+    } finally {
+      setLoading(false);
     }
   };
 
