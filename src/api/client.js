@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const isProd = false;
+const isProd = true;
 
 const API_BASE_URL = isProd ? "https://social-feed-app-backend.onrender.com/api" : 'http://localhost:5000/api';
 
