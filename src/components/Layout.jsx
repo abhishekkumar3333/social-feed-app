@@ -1,48 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Bell, User, PlusSquare, BarChart3, LogOut, Compass } from 'lucide-react';
+import { Home, Bell, User, BarChart3, LogOut, Compass } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { useQueryClient } from '@tanstack/react-query';
+
+const TOAST_MESSAGES = {
+  like: 'Someone liked your post!',
+  comment: 'New comment on your post!',
+  follow: 'You have a new follower!',
+  post_approved: 'Your post was approved!',
+  post_rejected: 'Your post was rejected.',
+};
 
 const Layout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const socket = useSocket();
-  const [unreadCount, setUnreadCount] = useState(0);
-
   const queryClient = useQueryClient();
+
+  const [unreadCount, setUnreadCount] = useState(0);
   const [toastNotif, setToastNotif] = useState(null);
 
-  useEffect(() => {
-    if (socket) {
-      const handleNotification = (notif) => {
-        setUnreadCount(prev => prev + 1);
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        
-        // Show temporary toast
-        setToastNotif(notif);
-        setTimeout(() => {
-          setToastNotif(null);
-        }, 5000);
-      };
-
-      socket.on('notification', handleNotification);
-
-      return () => {
-        socket.off('notification', handleNotification);
-      };
-    }
-  }, [socket, queryClient]);
-
-  useEffect(() => {
-    if (user && location.pathname !== '/notifications') {
-      client.get('/notifications').then(res => {
-        const unread = res.data.filter(n => !n.read).length;
-        setUnreadCount(unread);
-      }).catch(console.error);
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await client.get('/notifications');
+      const count = parseInt(res.headers['x-unread-count'] ?? '0', 10);
+      setUnreadCount(isNaN(count) ? 0 : count);
+    } catch {
+      // no-op
     }
   }, [user]);
 
@@ -50,12 +38,28 @@ const Layout = () => {
     if (location.pathname === '/notifications') {
       setUnreadCount(0);
       setToastNotif(null);
-      // Auto-mark as read when visiting the page
-      client.patch('/notifications/read').then(() => {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      }).catch(console.error);
+      client
+        .patch('/notifications/read')
+        .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+        .catch(console.error);
+    } else {
+      fetchUnreadCount();
     }
-  }, [location.pathname, queryClient]);
+  }, [location.pathname, fetchUnreadCount, queryClient]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNotification = (notif) => {
+      setUnreadCount((prev) => prev + 1);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setToastNotif(notif);
+      setTimeout(() => setToastNotif(null), 5000);
+    };
+
+    socket.on('notification', handleNotification);
+    return () => socket.off('notification', handleNotification);
+  }, [socket, queryClient]);
 
   const navItems = [
     { icon: Home, label: 'Feed', path: '/' },
@@ -70,7 +74,8 @@ const Layout = () => {
       <aside className="w-64 glass-effect border-r hidden md:flex flex-col fixed h-screen">
         <div className="p-8">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-brand to-purple-500 bg-clip-text text-transparent">
-            social-feed          </h1>
+            social-feed
+          </h1>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto scrollbar-hide">
@@ -81,10 +86,11 @@ const Layout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${isActive
-                  ? 'bg-brand text-white shadow-lg shadow-brand/20'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
+                className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-brand text-white shadow-lg shadow-brand/20'
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
                 <div className="relative">
                   <Icon size={22} />
@@ -102,7 +108,10 @@ const Layout = () => {
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2 mt-auto">
           {user && (
-            <Link to={`/profile/${user._id || user.id}`} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full group">
+            <Link
+              to={`/profile/${user._id || user.id}`}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full group"
+            >
               <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
                 <img
                   src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username || 'default'}`}
@@ -111,8 +120,12 @@ const Layout = () => {
                 />
               </div>
               <div className="flex-1 overflow-hidden truncate">
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{user.displayName || user.username}</p>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-brand truncate">{user.role}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {user.displayName || user.username}
+                </p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-brand truncate">
+                  {user.role}
+                </p>
               </div>
             </Link>
           )}
@@ -138,7 +151,11 @@ const Layout = () => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           return (
-            <Link key={item.path} to={item.path} className={`relative p-2 rounded-full ${isActive ? 'text-brand' : 'text-slate-500'}`}>
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`relative p-2 rounded-full ${isActive ? 'text-brand' : 'text-slate-500'}`}
+            >
               <Icon size={24} />
               {item.badge > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full">
@@ -150,7 +167,6 @@ const Layout = () => {
         })}
       </nav>
 
-      {/* Toast Notification Popup */}
       {toastNotif && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-2xl p-4 flex items-center gap-3 w-80">
@@ -162,15 +178,10 @@ const Layout = () => {
                 New Notification
               </p>
               <p className="text-xs text-slate-500 truncate mt-0.5">
-                {toastNotif.type === 'like' && 'Someone liked your post!'}
-                {toastNotif.type === 'comment' && 'New comment on your post!'}
-                {toastNotif.type === 'follow' && 'You have a new follower!'}
-                {toastNotif.type === 'post_approved' && 'Your post was approved!'}
-                {toastNotif.type === 'post_rejected' && 'Your post was rejected.'}
-                {!['like', 'comment', 'follow', 'post_approved', 'post_rejected'].includes(toastNotif.type) && 'You have a new system alert.'}
+                {TOAST_MESSAGES[toastNotif.type] ?? 'You have a new system alert.'}
               </p>
             </div>
-            <button 
+            <button
               onClick={() => setToastNotif(null)}
               className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400"
             >
