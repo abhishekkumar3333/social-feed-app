@@ -103,7 +103,7 @@ const Notifications = () => {
                         ))}
                       </div>
                     ) : (
-                      <img src={notif.actorId?.avatarUrl} className="w-6 h-6 rounded-full" alt="" />
+                      <img src={notif.actorId?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=system'} className="w-6 h-6 rounded-full" alt="" />
                     )}
                     <p className="text-sm">
                       <span className="font-bold">
